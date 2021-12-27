@@ -45,7 +45,12 @@ Make sure you delete this file once done, or set token expiry on github`,
 			}
 			if verifyAuth(username, token) == true {
 				fmt.Println("Creating/Updating credential file")
-				credFile, e := os.Create(".creds")
+				home, err := os.UserHomeDir()
+				if err != nil {
+					log.Fatalln(err)
+				}
+				filePath := home + "/.git-mass"
+				credFile, e := os.Create(filePath)
 				if e != nil {
 					log.Fatalln(e)
 				}
@@ -54,7 +59,7 @@ Make sure you delete this file once done, or set token expiry on github`,
 					return
 				}
 				file, _ := json.MarshalIndent(data, "", " ")
-				_ = ioutil.WriteFile(".creds", file, 0644)
+				_ = ioutil.WriteFile(filePath, file, 0644)
 			}
 		} else {
 			if verifyAuth(storedUname, storedToken) == true {

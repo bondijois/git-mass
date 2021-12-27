@@ -29,20 +29,29 @@ var cloneCmd = &cobra.Command{
 			createDir(organization)
 			var wg sync.WaitGroup
 			wg.Add(len(allRepos))
+			cloneErrors, pullErrors := make(chan error, len(allRepos)), make(chan error, len(allRepos))
 			for i := range allRepos {
 				go func(repo *github.Repository) {
 					defer wg.Done()
 					path := "./" + organization + "/" + repo.GetName()
-					if cloneErr := cloneRepo(username, token, path, repo); cloneErr != nil {
-						if pullErr := pullRepo(username, token, path); pullErr != nil {
-							fmt.Printf("- %s : repository %s\n", repo.GetCloneURL(), pullErr)
+					go cloneRepo(username, token, path, repo, cloneErrors)
+					cloneError := <-cloneErrors
+					if cloneError != nil {
+						go pullRepo(username, token, path, pullErrors)
+						pullError := <-pullErrors
+						if pullError != nil {
+							fmt.Printf("- %s : repository %s\n", repo.GetCloneURL(), pullError)
 						} else {
 							fmt.Printf("+ %s : pulled latest commit successfully\n", repo.GetCloneURL())
 						}
+					} else {
+						fmt.Printf("+ %s : cloned successfully\n", repo.GetCloneURL())
 					}
 				}(allRepos[i])
 			}
 			wg.Wait()
+			close(cloneErrors)
+			close(pullErrors)
 			elapsed := time.Since(start)
 			fmt.Printf("Time Taken: %s\n", elapsed)
 		}

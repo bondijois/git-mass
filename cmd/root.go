@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
+	"os"
 )
 
 var config = viper.New()
@@ -35,8 +36,12 @@ func Execute() {
 }
 
 func init() {
-	config.AddConfigPath(".")
-	config.SetConfigName(".creds")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	config.AddConfigPath(home)
+	config.SetConfigName("/.git-mass")
 	config.SetConfigType("json")
 	if err := config.ReadInConfig(); err == nil {
 		return

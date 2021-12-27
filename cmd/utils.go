@@ -65,7 +65,7 @@ func fetchAllRepos(token, organization string) []*github.Repository {
 	return allRepos
 }
 
-func cloneRepo(username string, token string, path string, repo *github.Repository) error {
+func cloneRepo(username string, token string, path string, repo *github.Repository, errors chan error) {
 	_, err := git.PlainClone(
 		path, false, &git.CloneOptions{
 			Auth: &http.BasicAuth{
@@ -76,21 +76,20 @@ func cloneRepo(username string, token string, path string, repo *github.Reposito
 		},
 	)
 	if err != nil {
-		return err
+		errors <- err
 	} else {
-		fmt.Printf("+ %s : cloned successfully\n", repo.GetCloneURL())
-		return nil
+		errors <- nil
 	}
 }
 
-func pullRepo(username string, token string, path string) error {
+func pullRepo(username string, token string, path string, errors chan error) {
 	r, openErr := git.PlainOpen(path)
 	if openErr != nil {
-		return openErr
+		errors <- openErr
 	}
 	w, workErr := r.Worktree()
 	if workErr != nil {
-		return workErr
+		errors <- workErr
 	}
 	pullErr := w.Pull(
 		&git.PullOptions{
@@ -101,7 +100,8 @@ func pullRepo(username string, token string, path string) error {
 		},
 	)
 	if pullErr != nil {
-		return pullErr
+		errors <- pullErr
+	} else {
+		errors <- nil
 	}
-	return nil
 }
